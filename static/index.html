@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeafWatch · பயிர் காவல்</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--ink:#14231c;--mute:#5c6b63;--line:#d5ddd8;--bg:#e9eeeb;--card:#fff;--leaf:#1c7a4c;--leaf-d:#125636;--alert:#c43d24;--verify:#b4741a;--ok:#2f7d4f;--r:6px}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:"Mukta",system-ui,sans-serif;color:var(--ink);background:var(--bg);display:grid;grid-template-columns:minmax(0,1fr) 420px;font-size:16px;line-height:1.45}
+#map{height:100vh;z-index:0}
+#panel{height:100vh;overflow-y:auto;background:var(--card);border-left:1px solid var(--line)}
+header{padding:18px 20px 10px}
+h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.01em}
+h1 small{font-weight:400;color:var(--mute);font-size:15px;margin-left:8px}
+#me{color:var(--mute);font-size:14px;margin-top:2px}
+nav{display:flex;border-bottom:1px solid var(--line);padding:0 12px;position:sticky;top:0;background:var(--card);z-index:2}
+nav button{flex:1;background:none;border:0;border-bottom:3px solid transparent;padding:12px 4px;font:600 15px Mukta;color:var(--mute);cursor:pointer}
+nav button.on{color:var(--leaf-d);border-color:var(--leaf)}
+nav .n{display:inline-block;min-width:20px;padding:0 6px;border-radius:10px;background:var(--alert);color:#fff;font-size:12px;margin-left:4px}
+section{display:none;padding:18px 20px 30px}
+section.on{display:block}
+button.cta,label.cta{display:block;width:100%;text-align:center;background:var(--leaf);color:#fff;border:1px solid var(--leaf);border-radius:var(--r);padding:13px;font:700 16px Mukta;cursor:pointer}
+label.cta.alt{background:#fff;color:var(--leaf-d)}
+button.cta:hover{background:var(--leaf-d)}
+button.cta:disabled{opacity:.55;cursor:not-allowed}
+button.ghost{background:none;border:1px solid var(--line);border-radius:var(--r);padding:7px 12px;font:600 14px Mukta;cursor:pointer;color:var(--ink)}
+button:focus-visible,input:focus-visible,label:focus-within{outline:3px solid #8ec9a8;outline-offset:2px}
+#drop{border:2px dashed var(--line);border-radius:var(--r);padding:18px;text-align:center;color:var(--mute);margin-bottom:12px;min-height:120px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#drop img{max-width:100%;max-height:220px;border-radius:4px}
+input[type=text],input[type=password]{width:100%;padding:11px;border:1px solid var(--line);border-radius:var(--r);font:16px Mukta;margin:6px 0 12px}
+.card{border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-top:14px}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.bar{height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin:3px 0 9px}
+.bar i{display:block;height:100%;background:var(--leaf)}
+.chip{display:inline-block;padding:2px 9px;border-radius:12px;font-size:13px;font-weight:600;background:var(--bg);margin:2px 4px 2px 0}
+.chip.alert{background:#f7dcd5;color:#8c2512}.chip.verify{background:#f5e6c9;color:#7a4c0a}.chip.ok{background:#d8eddf;color:#1b5e38}
+.verdict{border-left:5px solid var(--mute);padding:8px 12px;margin-top:10px;background:var(--bg)}
+.verdict.alert{border-color:var(--alert)}.verdict.verify{border-color:var(--verify)}.verdict.none,.verdict.defer{border-color:var(--ok)}
+.verdict b{display:block;font-size:17px}
+.muted{color:var(--mute);font-size:14px}
+.al{border-left:5px solid var(--alert);padding:8px 12px;margin-bottom:10px;background:#fbf0ed}
+.al.req{border-color:var(--verify);background:#fbf5e9}
+.al p{margin:4px 0}
+#toast{position:fixed;top:14px;left:14px;max-width:420px;z-index:9999}
+#toast div{background:var(--alert);color:#fff;padding:12px 16px;border-radius:var(--r);margin-bottom:8px;box-shadow:0 4px 18px rgba(0,0,0,.25)}
+#toast div.v{background:var(--verify)}
+.overlay{position:fixed;inset:0;background:rgba(20,35,28,.62);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px}
+.overlay .box{background:#fff;border-radius:10px;padding:24px;max-width:430px;width:100%}
+.hidden{display:none!important}
+select{font:14px Mukta;padding:5px;border:1px solid var(--line);border-radius:var(--r);max-width:190px}
+.al.read{opacity:.72}
+.al.off{border-color:var(--ok);background:#eef6f0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{padding:8px 10px;background:var(--bg);border-radius:var(--r);font-size:13px}.stat b{font-size:20px;display:block}
+@media(max-width:860px){body{grid-template-columns:1fr;grid-template-rows:42vh auto;height:auto}#map{height:42vh}#panel{height:auto;border-left:0}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="map" aria-label="Map of reports and outbreaks"></div>
+<aside id="panel">
+  <header><h1>LeafWatch<small>பயிர் காவல்</small></h1><div id="me"></div><div class="row" style="margin-top:6px;justify-content:flex-start"><button class="ghost" id="adminLogin">Admin login</button><label for="acct" class="muted">Farmer:</label><select id="acct" aria-label="Switch farmer account"></select><button class="ghost" id="newAcct">+ New farmer</button></div></header>
+  <nav>
+    <button data-tab="report" class="on">Report</button>
+    <button data-tab="alerts">Alerts <span class="n hidden" id="nAl">0</span></button>
+    <button data-tab="admin" id="adminTab" class="hidden">Admin</button>
+  </nav>
+
+  <section id="t-report" class="on">
+    <div id="reqBanner" class="al req hidden"></div>
+    <div id="drop"><span>Take or choose a photo of one leaf.<br>ஒரு இலையின் படத்தை எடுக்கவும்.</span></div>
+    <input id="file" type="file" accept="image/*" class="hidden">
+    <div class="grid"><label class="cta alt" for="file" tabindex="0">Choose photo</label>
+    <button class="cta" id="send" disabled>Analyse &amp; report</button></div>
+    <p class="muted" style="margin-top:10px">Reports use your location on the map. <button class="ghost" id="gps">Use my GPS</button> <button class="ghost" id="liveGps">Enable live location</button> <button class="ghost" id="move">Pick on map</button></p>
+    <p class="muted" id="spotRow">Photo taken at: <b id="spotTxt">my registered location</b><br>
+      <button class="ghost" id="spotGps">Photo taken here (GPS)</button> <button class="ghost" id="spotMap">Pick photo spot on map</button> <button class="ghost" id="spotHome">Use my location</button><br>
+      <input id="spLat" type="text" inputmode="decimal" placeholder="lat" style="width:90px;margin:6px 4px 0 0"><input id="spLon" type="text" inputmode="decimal" placeholder="lon" style="width:90px;margin:6px 4px 0 0"><button class="ghost" id="spotTyped">Set typed spot</button></p>
+    <div id="result"></div>
+    <div id="mine"></div>
+  </section>
+
+  <section id="t-alerts"><div id="alerts"></div></section>
+
+  <section id="t-admin">
+    <p class="muted">Restricted admin console. Admin credentials are validated by the server.</p>
+    <input id="key" type="password" placeholder="Admin key" autocomplete="off">
+    <div id="stats" class="grid"></div>
+    <div id="adm"></div>
+  </section>
+</aside>
+
+<div id="toast" aria-live="assertive"></div>
+
+<div id="setup" class="overlay hidden"><div class="box">
+  <h2 style="margin:0 0 4px">Join your village network</h2>
+  <p class="muted" style="margin-top:0">Your name and location are used to send you alerts for outbreaks within 5 km.<br>உங்கள் பெயர், இடம் - 5 கி.மீ.க்குள் எச்சரிக்கை அனுப்ப.</p>
+  <label for="nm">Name / பெயர்</label><input id="nm" type="text" maxlength="60" placeholder="e.g. Murugan">
+  <div class="grid"><div><label for="latIn" class="muted">Latitude</label><input id="latIn" type="text" inputmode="decimal" placeholder="13.0827"></div>
+    <div><label for="lonIn" class="muted">Longitude</label><input id="lonIn" type="text" inputmode="decimal" placeholder="80.2707"></div></div>
+  <p class="muted" id="locTxt">Location: use GPS, or tap "Show map" and tap your village.</p>
+  <div class="grid"><button class="ghost" id="gps2">Use my GPS</button><button class="ghost" id="hide">Show map (6 s)</button></div>
+  <button class="cta" id="join" style="margin-top:12px">Join</button>
+  <p class="muted" id="setupErr" style="color:var(--alert)"></p>
+</div></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const api = async (u, o) => { const r = await fetch(u, o); let j = null; try { j = await r.json(); } catch (e) {} if (!r.ok) throw new Error((j && (Array.isArray(j.detail) ? (j.detail[0] && j.detail[0].msg) : j.detail)) || r.statusText); return j; };
+// Identity is per browser TAB (sessionStorage) so several tabs can be different farmers; localStorage remembers the last one and the account list.
+const store = { get(k, d) { try { return JSON.parse(sessionStorage.getItem(k) ?? localStorage.getItem(k) ?? "null") ?? d; } catch (e) { return d; } },
+                put(k, v, tabOnly) { try { const t = JSON.stringify(v); sessionStorage.setItem(k, t); if (!tabOnly) localStorage.setItem(k, t); } catch (e) {} } };
+let spot = null, pickingSpot = false, me = store.get("lw_farmer", null), pick = null, picking = !me, ws = null, reqId = null, chosen = null, adminKey = "", isAdmin = false, liveWatchId = null, lastGpsPush = 0;
+const accounts = () => { try { return JSON.parse(localStorage.getItem("lw_accounts") || "[]"); } catch (e) { return []; } };
+function rememberAccount(f) { const a = accounts().filter(x => x.id !== f.id); a.push({ id: f.id, name: f.name }); try { localStorage.setItem("lw_accounts", JSON.stringify(a)); } catch (e) {} }
+
+// ---------- map
+const map = L.map("map").setView([me ? me.lat : 13.0827, me ? me.lon : 80.2707], 12);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "© OpenStreetMap" }).addTo(map);
+const gSpot = L.layerGroup().addTo(map), gOut = L.layerGroup().addTo(map), gRep = L.layerGroup().addTo(map), gMe = L.layerGroup().addTo(map);
+function setSpot(p) {
+  spot = p; gSpot.clearLayers(); pickingSpot = false;
+  if (p) { L.circleMarker([p.lat, p.lon], { radius: 9, color: "#fff", weight: 2, fillColor: "#b4741a", fillOpacity: 1 }).addTo(gSpot).bindTooltip("Photo spot"); map.setView([p.lat, p.lon], 13); }
+  $("#spotTxt").textContent = p ? p.lat.toFixed(4) + ", " + p.lon.toFixed(4) + " (this report only; your profile location is unchanged)" : "my registered location";
+}
+map.on("click", e => {
+  if (pickingSpot) return setSpot({ lat: e.latlng.lat, lon: e.latlng.lng });
+  if (!picking) return;
+  pick = { lat: e.latlng.lat, lon: e.latlng.lng }; drawMe(pick.lat, pick.lon);
+  $("#locTxt").textContent = "Location set: " + pick.lat.toFixed(4) + ", " + pick.lon.toFixed(4);
+  if (me) moveTo(pick);
+});
+function drawMe(lat, lon) {
+  gMe.clearLayers();
+  L.circle([lat, lon], { radius: 5000, color: "#1c7a4c", weight: 1, dashArray: "5 6", fill: false }).addTo(gMe);
+  L.circleMarker([lat, lon], { radius: 8, color: "#fff", weight: 2, fillColor: "#14231c", fillOpacity: 1 }).addTo(gMe).bindTooltip("You · 5 km alert zone");
+}
+async function moveTo(p) {
+  try {
+    await api("/api/farmers/" + me.id + "/location", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });
+    me.lat = p.lat; me.lon = p.lon; store.put("lw_farmer", me); picking = false; drawMe(p.lat, p.lon);
+  } catch (e) { toast(e.message); }
+}
+function gps(cb) {
+  if (!navigator.geolocation) return toast("GPS is not available in this browser");
+  navigator.geolocation.getCurrentPosition(p => cb({ lat: p.coords.latitude, lon: p.coords.longitude }), () => toast("Could not read GPS. Tap the map instead."), { enableHighAccuracy: true, timeout: 10000 });
+}
+
+// ---------- helpers
+function toast(msg, cls) { const d = document.createElement("div"); d.className = cls || ""; d.textContent = msg; $("#toast").append(d); setTimeout(() => d.remove(), 12000); }
+const pct = x => Math.round(x * 100) + "%";
+const ago = ts => { const m = Math.round((Date.now() / 1000 - ts) / 60); return m < 60 ? m + " min ago" : m < 1440 ? Math.round(m / 60) + " h ago" : Math.round(m / 1440) + " d ago"; };
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  if (b.dataset.tab === "admin" && !isAdmin) return toast("Admin login required.");
+  document.querySelectorAll("nav button,section").forEach(x => x.classList.remove("on"));
+  b.classList.add("on"); $("#t-" + b.dataset.tab).classList.add("on");
+  if (b.dataset.tab === "alerts") loadAlerts(true);
+  if (b.dataset.tab === "admin") loadAdmin();
+});
+const tab = n => document.querySelector("nav [data-tab=" + n + "]").click();
+
+// ---------- join / switch farmer
+function setup() { $("#setup").classList.remove("hidden"); }
+function fillAccounts() {
+  const sel = $("#acct"), list = accounts();
+  if (me && !list.some(a => a.id === me.id)) list.push({ id: me.id, name: me.name });
+  sel.innerHTML = list.map(a => '<option value="' + a.id + '"' + (me && a.id === me.id ? " selected" : "") + ">" + esc(a.name) + " (#" + a.id + ")</option>").join("");
+}
+$("#acct").onchange = async e => {
+  try { const f = await api("/api/farmers/" + e.target.value); store.put("lw_farmer", f, false); sessionStorage.setItem("lw_farmer", JSON.stringify(f)); location.reload(); }
+  catch (x) { toast(x.message); }
+};
+$("#newAcct").onclick = () => { me = null; picking = true; pick = null; $("#nm").value = ""; $("#latIn").value = ""; $("#lonIn").value = ""; $("#locTxt").textContent = 'Location: use GPS, or tap "Show map" and tap your village.'; if (ws) { try { ws.onclose = null; ws.close(); } catch (e) {} } setup(); };
+$("#gps2").onclick = () => gps(p => { pick = p; $("#latIn").value = p.lat.toFixed(5); $("#lonIn").value = p.lon.toFixed(5); map.setView([p.lat, p.lon], 13); drawMe(p.lat, p.lon); $("#locTxt").textContent = "Location set from GPS: " + p.lat.toFixed(4) + ", " + p.lon.toFixed(4); });
+$("#hide").onclick = () => { $("#setup").classList.add("hidden"); setTimeout(() => { if (!me) $("#setup").classList.remove("hidden"); }, 6000); };
+function typedLoc() {
+  const la = parseFloat($("#latIn").value), lo = parseFloat($("#lonIn").value);
+  if (isNaN(la) || isNaN(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180) return null;
+  return { lat: la, lon: lo };
+}
+["#latIn", "#lonIn"].forEach(id => $(id).oninput = () => { const p = typedLoc(); if (p) { pick = p; drawMe(p.lat, p.lon); map.setView([p.lat, p.lon], 13); $("#locTxt").textContent = "Location set (typed): " + p.lat.toFixed(4) + ", " + p.lon.toFixed(4); } });
+$("#join").onclick = async () => {
+  const name = $("#nm").value.trim(); $("#setupErr").textContent = "";
+  if (!name) return ($("#setupErr").textContent = "Please enter your name.");
+  if (!pick) return ($("#setupErr").textContent = "Set your location (GPS or tap the map).");
+  try {
+    me = await api("/api/farmers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, lat: pick.lat, lon: pick.lon }) });
+    store.put("lw_farmer", me); rememberAccount(me); $("#setup").classList.add("hidden"); picking = false; start();
+  } catch (e) { $("#setupErr").textContent = e.message; }
+};
+$("#gps").onclick = () => gps(p => { map.setView([p.lat, p.lon], 13); moveTo(p); });
+function gpsDistanceM(a, b) {
+  const rad = x => x * Math.PI / 180, R = 6371000;
+  const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
+  const q = Math.sin(dLat/2)**2 + Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.min(1, Math.sqrt(q)));
+}
+$("#liveGps").onclick = () => {
+  if (!me) return toast("Join as a farmer first.");
+  if (!navigator.geolocation) return toast("Live GPS is not available in this browser.");
+  if (liveWatchId !== null) {
+    navigator.geolocation.clearWatch(liveWatchId); liveWatchId = null;
+    $("#liveGps").textContent = "Enable live location";
+    toast("Live location stopped.", "v"); return;
+  }
+  liveWatchId = navigator.geolocation.watchPosition(async pos => {
+    const p = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+    const now = Date.now();
+    if (gpsDistanceM(me, p) < 100 && now - lastGpsPush < 60000) return;
+    try {
+      await moveTo(p); lastGpsPush = now;
+      $("#liveGps").textContent = "Stop live location";
+      $("#spotTxt").textContent = "live GPS location";
+    } catch (e) { toast("Could not update live location: " + e.message); }
+  }, err => toast("GPS permission/location error: " + err.message), { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
+  $("#liveGps").textContent = "Stop live location";
+  toast("Live location enabled while this page is open. You can stop it anytime.", "v");
+};
+$("#spotGps").onclick = () => gps(setSpot);
+$("#spotMap").onclick = () => { pickingSpot = true; toast("Tap the map where the photo was taken", "v"); };
+$("#spotHome").onclick = () => { setSpot(null); $("#spLat").value = $("#spLon").value = ""; };
+$("#spotTyped").onclick = () => { const la = parseFloat($("#spLat").value), lo = parseFloat($("#spLon").value); if (isNaN(la) || isNaN(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180) return toast("Type a valid latitude and longitude"); setSpot({ lat: la, lon: lo }); };
+$("#move").onclick = () => { picking = true; toast("Tap the map to set your location", "v"); };
+
+// ---------- report
+$("#file").onchange = e => {
+  chosen = e.target.files[0]; if (!chosen) return;
+  $("#drop").innerHTML = ""; const im = new Image(); im.alt = "selected leaf"; im.src = URL.createObjectURL(chosen); $("#drop").append(im); $("#send").disabled = false;
+};
+$("#send").onclick = async () => {
+  if (!chosen) return; const b = $("#send"); b.disabled = true; b.textContent = "Analysing…";
+  const fd = new FormData(); fd.append("farmer_id", me.id); const at = spot || me; fd.append("lat", at.lat); fd.append("lon", at.lon); fd.append("image", chosen); if (reqId) fd.append("request_id", reqId);
+  try {
+    const r = await api("/api/report", { method: "POST", body: fd }); const hadReq = reqId; show(r);
+    if (r.request_fulfilled) {
+      reqId = null; $("#reqBanner").classList.add("hidden");
+      const AN = { confirms: "your photo confirms the neighbour's report", contradicts: "your photo shows a healthy leaf, which contradicts the neighbour's report", other_disease: "your photo shows a different disease" };
+      $("#result").insertAdjacentHTML("beforeend", '<p class="muted"><b>Verification answered:</b> ' + esc(AN[r.request_answer] || "answer saved") + ". Thank you (+15 points).</p>");
+    }
+    else if (hadReq) {
+      const WHY = { not_new_evidence: "this photo repeats an earlier one", inconclusive_photo: "the model was not sure about this photo, please retake it", wrong_crop: "the photo shows a different crop than the one requested", nothing_pending: "the request is no longer open", not_your_open_request: "that request is not open for you" };
+      $("#result").insertAdjacentHTML("beforeend", '<p class="muted">Your verification request is still open: ' + esc(WHY[r.request_not_answered_reason] || "this photo could not be used as an answer") + ".</p>");
+    }
+    loadMine(); refresh(); refreshMe(); loadAlerts();
+  }
+  catch (e) { $("#result").innerHTML = '<div class="card" style="border-color:var(--alert)"><b>Could not analyse</b><div class="muted">' + esc(e.message) + "</div></div>"; }
+  b.textContent = "Analyse & report"; b.disabled = false;
+};
+
+// Everything shown here comes from what the SERVER saved (alerts_created / requests_created are read back from the database).
+function verdict(r) {
+  const o = r.outbreak, n = o.sent_to || 0;
+  switch (o.action) {
+    case "repeat": return ["none", "Repeat of an earlier photo", "Nothing new was added: it is kept on record, adds no evidence, earns no points and triggers nothing."];
+    case "alert":
+      if (o.alert_status === "sent") return ["alert", "Outbreak alert sent", n ? n + " farmer(s) within 5 km were alerted (saved in their Alerts tab)." : "Outbreak recorded, but no registered farmer lives within 5 km of it."];
+      if (o.alert_status === "extended") return ["alert", "Existing outbreak updated", (n ? n + " more farmer(s) alerted. " : "Everyone in range was already alerted. ") + "Outbreak #" + o.outbreak_id + "."];
+      if (o.alert_status === "pending_admin") return ["verify", "Outbreak detected: waiting for admin approval", "Nobody has been alerted yet. The admin must confirm outbreak #" + o.outbreak_id + " first."];
+      if (o.alert_status === "suppressed_rejected") return ["defer", "No new alert", "An admin rejected an earlier alert for this outbreak (#" + o.outbreak_id + ") within the last 12 hours, so nobody was alerted again."];
+      return ["alert", "Outbreak", ""];
+    case "verify":
+      if (o.verify_status === "requested") return ["verify", "Possible outbreak: verification requested", n + " nearby farmer(s) (within " + (o.verify_radius_km || 1.5) + " km) were asked to photograph their crop. Nobody has been alerted."];
+      if (o.verify_status === "already_pending") return ["verify", "Possible outbreak: verification already pending", "A verification request for this crop and disease is already open nearby. Nobody has been alerted."];
+      return ["verify", "Possible outbreak: more evidence needed", "No other registered farmer lives within " + (o.verify_radius_km || 5) + " km (or they all reported in the last 24 h), so no request was sent. It is listed for the admin under “Awaiting verification”. Nobody has been alerted."];
+    case "defer": return ["defer", "Logged, no alert yet", "Evidence is still too weak. Nothing was sent."];
+    default:
+      if (r.assessment === "healthy") return ["none", "Looks healthy", (o.context && o.context.length) ? "This healthy report was compared with nearby reports (below)." : "No outbreak signal from this photo."];
+      return ["defer", "Not conclusive", "The model is not sure enough to call this leaf healthy or sick. Please retake in daylight: one leaf, in focus."];
+  }
+}
+function evidenceLine(o) {
+  return esc(o.candidate) + ": outbreak probability <b>" + pct(o.P) + "</b> · evidence " + o.n_eff.toFixed(2) + " · independent farmers " + o.independent_farmers + " · conflict " + pct(o.conflict);
+}
+function show(r) {
+  if (r.retake_required) {
+    const why = (r.reason_messages && r.reason_messages.length ? r.reason_messages : ["The photo is not reliable enough."]).map(m => "<li>" + esc(m) + "</li>").join("");
+    $("#result").innerHTML = '<div class="card"><div class="verdict verify"><b>Photo needs to be retaken</b><ul style="margin:6px 0 4px 18px;padding:0">' + why + '</ul>No crop or disease has been confirmed.</div>' +
+      '<span class="chip alert">Uncertainty ' + pct(r.uncertainty) + '</span>' + (r.blurry ? '<span class="chip verify">Blurry photo</span>' : '') +
+      '<p class="muted" style="margin-top:10px">' + esc(r.message) + '</p><p><b>Try this:</b> use daylight, hold the camera steady, and focus on one leaf so its veins and spots are sharp.</p><p class="muted">This image was not added as outbreak evidence and no farmer points or alerts were generated.</p></div>';
+    return;
+  }
+  const o = r.outbreak, v = verdict(r), unc = r.uncertainty, rk = r.repeat_kind;
+  const bars = r.top.map(t => '<div class="row"><span>' + esc(t.name) + "</span><b>" + pct(t.p) + '</b></div><div class="bar"><i style="width:' + t.p * 100 + '%"></i></div>').join("");
+  const nov = rk === "exact_duplicate"
+    ? '<span class="chip verify">Counted as 0% new evidence</span><div class="muted">This is the same photo as an earlier report (cluster #' + r.cluster_id + "). It is kept on record but adds no evidence.</div>"
+    : rk === "similar_photo" ? '<span class="chip verify">Counted as ' + pct(r.novelty) + ' new evidence</span><div class="muted">Looks like a repeat of an earlier report (cluster #' + r.cluster_id + "). It is kept, but not counted twice.</div>"
+    : rk === "same_plot" ? '<span class="chip verify">Counted as ' + pct(r.novelty) + ' new evidence</span><div class="muted">Another photo of the same plot you already reported (cluster #' + r.cluster_id + "). One field counts as one observation.</div>"
+    : '<span class="chip ok">Counted as new evidence</span>';
+  const ctx = (o.context || []).map(c => '<p class="muted" style="margin:6px 0 0">Nearby <b>' + esc(c.candidate) + "</b> reports: outbreak probability now <b>" + pct(c.P) + "</b> · independent farmers " + c.n_src + " · conflict " + pct(c.conflict) + "</p>").join("");
+  const noctx = (r.assessment === "healthy" && o.action === "none" && !(o.context || []).length) ? '<p class="muted" style="margin:6px 0 0">No disease reports for this crop within 5 km, so there is nothing to compare. A healthy leaf does not cancel a disease report from a different plant.</p>' : "";
+  $("#result").innerHTML = '<div class="card">' + bars +
+    '<span class="chip ' + (unc > 0.5 ? "alert" : unc > 0.25 ? "verify" : "ok") + '">Uncertainty ' + pct(unc) + "</span>" + (r.blurry ? '<span class="chip verify">Slightly soft photo</span>' : "") + (r.retake ? '<span class="chip alert">Retake suggested</span>' : "") +
+    '<div style="margin-top:8px">' + nov + "</div>" +
+    '<div class="verdict ' + v[0] + '"><b>' + esc(v[1]) + "</b>" + esc(v[2]) + "</div>" +
+    (o.candidate ? '<p class="muted" style="margin:10px 0 0">' + evidenceLine(o) + (o.costs ? "<br>Expected cost → alert " + o.costs.alert.toFixed(2) + " · verify " + o.costs.verify.toFixed(2) + " · wait " + o.costs.defer.toFixed(2) : "") + (o.override ? "<br><i>" + esc(o.override) + "</i>" : "") + "</p>" : "") + ctx + noctx +
+    '<p class="muted" style="margin:8px 0 0">+' + r.points_earned + " points" + (r.points_earned === 0 ? " (repeats earn none)" : "") + " · " + r.points + " total · " + esc(r.badge) + "</p></div>";
+}
+async function loadMine() {
+  const rows = await api("/api/farmers/" + me.id + "/reports").catch(() => []);
+  $("#mine").innerHTML = rows.length ? '<h3 style="margin:22px 0 6px">Your reports</h3>' + rows.slice(0, 8).map(r =>
+    '<div class="row" style="border-bottom:1px solid var(--line);padding:6px 0"><span>' + esc(r.top_class) + '<div class="muted">' + ago(r.ts) + " · counted " + pct(r.w) + '</div></span><span class="chip ' + (r.action === "alert" ? "alert" : r.action === "verify" ? "verify" : "") + '">' + esc(r.action) + "</span></div>").join("") : "";
+}
+async function refreshMe() {
+  try { me = Object.assign({}, me, await api("/api/farmers/" + me.id)); $("#me").textContent = me.name + " · reliability " + pct(me.reliability) + " · " + me.points + " pts · " + me.badge; } catch (e) {}
+}
+
+// ---------- alerts + verification requests (always for the farmer of THIS tab)
+async function loadAlerts(viewing) {
+  if (!me) return;
+  const fid = me.id;
+  const al = await api("/api/farmers/" + fid + "/alerts").catch(() => []), rq = await api("/api/farmers/" + fid + "/requests").catch(() => []);
+  if (!me || me.id !== fid) return;
+  const unread = al.filter(a => !a.read && a.status !== "rejected").length;
+  $("#nAl").textContent = unread + rq.length; $("#nAl").classList.toggle("hidden", !(unread + rq.length));
+  $("#alerts").innerHTML = rq.map(q => '<div class="al req"><b>' + (q.reminder ? "⏰ Reminder: " : "") + 'Please verify: ' + esc(q.disease) + " on " + esc(q.crop) + "</b><p>A neighbour reported this near you" + (q.reminder ? " " + q.age_h + " h ago and is still waiting for a second opinion" : "") + ". Photograph one leaf of your own crop (healthy or sick, both help).</p><button class=\"ghost\" data-req=\"" + q.id + '">Photograph now</button></div>').join("") +
+    al.map(a => '<div class="al' + (a.read ? " read" : "") + (a.status === "rejected" ? " off" : "") + '"><b>' + esc(a.disease) + " · " + esc(a.crop) + '</b> <span class="chip ' + (a.status === "rejected" ? "ok" : "alert") + '">' + (a.status === "rejected" ? "false alarm, withdrawn by admin" : esc(a.status)) + "</span>" + (a.read ? "" : ' <span class="chip verify">new</span>') + "<p>" + esc(a.msg_en) + "</p><p>" + esc(a.msg_ta) + '</p><div class="muted">' + ago(a.ts) + " · " + a.dist_km.toFixed(1) + " km away</div></div>").join("") ||
+    '<p class="muted">No alerts. You will be notified here the moment an outbreak is announced within 5 km.</p>';
+  document.querySelectorAll("[data-req]").forEach(b => b.onclick = () => {
+    reqId = +b.dataset.req; $("#reqBanner").innerHTML = "<b>Verification photo</b> for a neighbour's report. Upload one leaf of your crop."; $("#reqBanner").classList.remove("hidden"); tab("report");
+  });
+  if (viewing && unread) { api("/api/farmers/" + fid + "/alerts/read", { method: "POST" }).then(() => { $("#nAl").textContent = rq.length; $("#nAl").classList.toggle("hidden", !rq.length); }).catch(() => {}); }
+}
+
+// ---------- live socket
+let pingTimer = null;
+function connect() {
+  const fid = me.id;
+  ws = new WebSocket((location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws/" + fid);
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.type === "alert") { toast("⚠ " + m.disease + " on " + m.crop + ", " + m.dist_km + " km away. " + m.msg_ta); try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (x) {} }
+    else if (m.type === "reminder") { toast("Reminder: a neighbour is still waiting for your photo (" + m.disease + " on " + m.crop + "). Open Alerts.", "v"); loadAlerts(); }
+    else if (m.type === "verify") toast("Please verify: " + m.disease + " on " + m.crop + " reported nearby. Open Alerts.", "v");
+    else if (m.type === "alert_update") toast("An earlier outbreak alert was a false alarm and has been withdrawn.", "v");
+    loadAlerts(document.querySelector("#t-alerts").classList.contains("on")); refresh();
+  };
+  ws.onclose = () => { clearInterval(pingTimer); setTimeout(() => me && me.id === fid && connect(), 3000); };
+  ws.onopen = () => { pingTimer = setInterval(() => ws.readyState === 1 && ws.send("ping"), 25000); loadAlerts(); };   // after a server restart, re-read what was missed
+}
+
+// ---------- map data
+async function refresh() {
+  const ob = await api("/api/outbreaks").catch(() => []), rp = await api("/api/reports/recent").catch(() => []);
+  gOut.clearLayers(); gRep.clearLayers();
+  rp.forEach(r => L.circleMarker([r.lat, r.lon], { radius: 4 + 4 * r.w, color: "#fff", weight: 1, fillColor: r.top_class.endsWith("Healthy") ? "#2f7d4f" : r.u > 0.5 ? "#b4741a" : "#c43d24", fillOpacity: 0.55 + 0.4 * r.w }).addTo(gRep).bindTooltip(esc(r.top_class) + " · " + pct(r.top_p) + " · counted " + pct(r.w)));
+  ob.forEach(o => {
+    const c = o.status === "confirmed" ? "#8c2512" : "#c43d24";
+    L.circle([o.lat, o.lon], { radius: 5000, color: c, weight: 2, fillColor: c, fillOpacity: 0.08 }).addTo(gOut).bindPopup("<b>" + esc(o.disease) + "</b> on " + esc(o.crop) + "<br>probability " + pct(o.P) + " · " + esc(o.status) + " · " + ago(o.ts));
+    L.circleMarker([o.lat, o.lon], { radius: 7, color: "#fff", weight: 2, fillColor: c, fillOpacity: 1 }).addTo(gOut);
+  });
+}
+
+// ---------- admin
+const ASTAT = {
+  requested: "waiting for farmers' photos",
+  already_pending: "request already open nearby",
+  no_eligible_farmers: "no farmer in range to ask",
+  conflict_detected: "conflict: neighbour reported healthy leaf",
+  confirmed_by_neighbour: "neighbour confirmed disease",
+  completed: "verification answered",
+  expired: "requests expired without answer",
+  rejected: "rejected by admin (false alarm)",
+  deferred: "deferred by admin (insufficient evidence)"
+};
+function outbreakCard(o, actions, approval) {
+  const st = o.status === "pending" ? "awaiting approval" : o.status;
+  return '<div class="card"><div class="row"><b>#' + o.id + " " + esc(o.disease) + " · " + esc(o.crop) + '</b><span class="chip ' + (o.status === "rejected" ? "ok" : o.status === "confirmed" ? "ok" : "alert") + '">' + esc(st) + '</span></div><div class="muted">P ' + pct(o.P) + " · " + o.alerts_persisted + " alert(s) saved (" + o.alerts_read + " read) · " + ago(o.ts) + "</div>" +
+    (actions && o.now ? '<div class="muted">Evidence now: P ' + pct(o.now.P) + " · conflict " + pct(o.now.conflict) + " · engine would now say " + esc(o.now.action.toUpperCase()) + (o.now.action !== "alert" ? " ⚠ review before approving" : "") + "</div>" : "") +
+    (actions ? '<div class="muted">Independent farmers in evidence: ' + o.independent_farmers + (o.can_approve ? "" : " (at least 2 needed: approval disabled, you can still reject or defer)") + '</div><div class="grid" style="margin-top:8px"><button class="ghost" data-type="outbreak" data-action="confirm" data-id="' + o.id + '"' + (o.can_approve ? "" : " disabled") + '>' + (approval && o.status === "pending" ? "Approve and alert" : "Confirm (real)") + '</button><button class="ghost" data-type="outbreak" data-action="reject" data-id="' + o.id + '">Reject (false alarm)</button><button class="ghost" data-type="outbreak" data-action="defer" data-id="' + o.id + '">Defer</button></div>' : "") + "</div>";
+}
+async function loadAdmin() {
+  const s = await api("/api/stats").catch(() => null);
+  if (!isAdmin || !adminKey) return;
+  $("#key").value = adminKey;
+  let ov = null, err = "";
+  try { ov = await api("/api/admin/overview", { headers: { "X-Admin-Key": adminKey } }); } catch (e) { err = e.message; }
+  if (s) {
+    const m = s.model || {};
+    $("#stats").innerHTML = [["Farmers", s.farmers], ["Reports", s.reports], ["Evidence clusters", s.clusters], ["Repeats merged", s.duplicates_merged], ["Down-weighted", s.down_weighted],
+      ["Outbreaks to decide", s.open_outbreaks], ["Awaiting verification", s.verify_candidates], ["Alerts saved", s.alerts_sent], ["Farmers alerted", s.farmers_alerted], ["Confirmed / rejected", s.confirmed + " / " + s.rejected],
+      ["Model accuracy", m.val_acc ? pct(m.val_acc) : "n/a"], ["Calibration error", m.ece_calibrated != null ? (m.ece_calibrated * 100).toFixed(1) + "%" : "n/a"]]
+      .map(x => '<div class="stat"><b>' + esc(x[1]) + "</b>" + esc(x[0]) + "</div>").join("");
+  }
+  if (!ov) { $("#adm").innerHTML = '<p class="muted">' + esc(err || "Could not load.") + "</p>"; return; }
+  const ver = (ov.verifications || []).map(v => {
+    const n = v.now, a = v.at_report;
+    const canAppr = v.can_approve || (v.now && v.now.independent_farmers >= 2);
+    return '<div class="card"><div class="row"><b>#' + v.id + " " + esc(v.disease) + " · " + esc(v.crop) + '</b><span class="chip verify">' + esc(v.verify_status || "verify") + '</span></div><div class="muted">' + v.n_reports + " report(s) by " + esc(v.reporters.join(", ")) + " · " + ago(v.last_ts) + "<br>Status: <b>" + esc(ASTAT[v.verify_status] || v.verify_status || "") + "</b>" +
+      "<br>Requests sent: " + v.requests_sent + " (answered " + v.requests_done + ", pending " + v.requests_pending + (v.requests_expired ? ", expired " + v.requests_expired : "") + ")" +
+      (v.requests_done ? "<br>Answers: " + Object.entries(v.answers).map(e => esc(e[0]) + ": " + e[1]).join(", ") : "") +
+      "<br>Other farmers nearby: " + v.other_farmers.confirming + " same disease · " + v.other_farmers.healthy + " healthy · " + v.other_farmers.other + " other (" + v.other_farmers.farmers + " farmer(s))<br>When asked: P " + pct(a.P || 0) + " · independent farmers " + (a.independent_farmers ?? 0) + " · conflict " + pct(a.conflict || 0) +
+      (n ? "<br>Now: P <b>" + pct(n.P) + "</b> · independent farmers <b>" + n.independent_farmers + "</b> · conflict <b>" + pct(n.conflict) + "</b> · decision <b>" + esc(n.action) + "</b>" : "") + (a.note ? "<br><i>" + esc(a.note) + "</i>" : "") + "</div>" +
+      '<div class="grid" style="margin-top:8px">' +
+      '<button class="ghost" data-type="verify" data-action="confirm" data-id="' + v.id + '"' + (canAppr ? "" : " disabled") + ' title="' + (canAppr ? "Approve candidate and alert nearby farmers" : "Requires at least 2 independent farmers to approve as an outbreak") + '">' + (canAppr ? "Approve and alert" : "Approve (needs 2+ farmers)") + '</button>' +
+      '<button class="ghost" data-type="verify" data-action="reject" data-id="' + v.id + '">Reject (false alarm)</button>' +
+      '<button class="ghost" data-type="verify" data-action="defer" data-id="' + v.id + '">Defer</button>' +
+      '<button class="ghost" data-type="verify" data-action="reverify" data-id="' + v.id + '"' + (v.can_reverify ? "" : " disabled") + '>Request verification</button>' +
+      '</div></div>';
+  }).join("");
+
+  const reviewedVer = (ov.reviewed_verifications || []).map(rv => {
+    return '<div class="card"><div class="row"><b>#' + rv.id + " " + esc(rv.disease) + " · " + esc(rv.crop) + '</b><span class="chip ' + (rv.status === "rejected" ? "alert" : "ok") + '">' + esc(rv.status) + '</span></div><div class="muted">Reported by ' + esc(rv.reporters.join(", ")) + " · " + esc(rv.status) + " by admin · " + ago(rv.last_ts) + (rv.note ? "<br><i>" + esc(rv.note) + "</i>" : "") + "</div></div>";
+  }).join("");
+
+  const reviewedOut = (ov.reviewed_outbreaks || []).map(o => outbreakCard(o, false)).join("");
+
+  $("#adm").innerHTML = (ov.approval_required ? '<p class="muted"><b>Approval mode:</b> farmers are alerted only after you approve an outbreak.</p>' : "") +
+    "<h3>Outbreaks to decide</h3>" + (ov.open_outbreaks.map(o => outbreakCard(o, true, ov.approval_required)).join("") || '<p class="muted">None right now. (An outbreak appears here only after the engine chose ALERT.)</p>') +
+    "<h3>Awaiting verification</h3>" + (ver || '<p class="muted">No open verification questions in the last 24 h.</p>') +
+    "<h3>Reviewed</h3>" + (reviewedOut || reviewedVer ? (reviewedOut + reviewedVer) : '<p class="muted">Nothing reviewed yet.</p>');
+
+  document.querySelectorAll("[data-action]").forEach(b => b.onclick = async () => {
+    if (b.disabled) return;
+    b.disabled = true;
+    const type = b.dataset.type, act = b.dataset.action, id = b.dataset.id;
+    try {
+      if (type === "outbreak") {
+        const r = await api("/api/admin/outbreaks/" + id + "/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Admin-Key": adminKey },
+          body: JSON.stringify({ confirmed: act === "confirm", action: act })
+        });
+        toast("Saved: " + r.status + (r.alerts_created != null ? ". " + r.alerts_created + " new alert(s)." : ""), "v");
+      } else if (type === "verify") {
+        const r = await api("/api/admin/verifications/" + id + "/decision", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Admin-Key": adminKey },
+          body: JSON.stringify({ action: act })
+        });
+        toast("Saved: " + (r.message || r.status), "v");
+      }
+      loadAdmin(); refresh();
+    } catch (e) {
+      toast(e.message);
+      b.disabled = false;
+    }
+  });
+}
+$("#key").onchange = () => {}; // Never authenticate merely because text was typed.
+$("#adminLogin").onclick = async () => {
+  if (isAdmin) {
+    isAdmin = false; adminKey = ""; $("#key").value = ""; $("#adminTab").classList.add("hidden");
+    $("#t-admin").classList.remove("on"); $("#t-report").classList.add("on");
+    document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === "report"));
+    $("#adminLogin").textContent = "Admin login"; $("#stats").innerHTML = ""; $("#adm").innerHTML = "";
+    toast("Admin logged out.", "v"); return;
+  }
+  const key = window.prompt("Enter the administrator key:");
+  if (!key) return;
+  try {
+    await api("/api/admin/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }) });
+    adminKey = key; isAdmin = true; $("#key").value = key; $("#adminTab").classList.remove("hidden");
+    $("#adminLogin").textContent = "Admin logout"; toast("Admin authenticated.", "v");
+    tab("admin"); loadAdmin();
+  } catch (e) { adminKey = ""; isAdmin = false; toast(e.message); }
+};
+
+function start() { fillAccounts(); drawMe(me.lat, me.lon); map.setView([me.lat, me.lon], 12); refreshMe(); loadMine(); loadAlerts(); refresh(); connect();
+  setInterval(refresh, 10000); setInterval(() => { if (isAdmin && document.querySelector("#t-admin").classList.contains("on")) loadAdmin(); }, 15000); setInterval(() => loadAlerts(document.querySelector("#t-alerts").classList.contains("on")), 20000); }
+(async () => {
+  if (me) { try { me = Object.assign({}, me, await api("/api/farmers/" + me.id)); store.put("lw_farmer", me); rememberAccount(me); start(); } catch (e) { try { sessionStorage.removeItem("lw_farmer"); localStorage.removeItem("lw_farmer"); } catch (x) {} me = null; picking = true; setup(); } }
+  else setup();
+})();
+</script>
+</body>
+</html>

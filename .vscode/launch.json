@@ -1,0 +1,65 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "LeafWatch: Run Server",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "app:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000",
+        "--reload"
+      ],
+      "env": {
+        "LEAFWATCH_REQUIRE_ADMIN_APPROVAL": "1"
+      },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "LeafWatch: Run Server (LAN / Mobile phones)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "app:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000"
+      ],
+      "env": {
+        "LEAFWATCH_REQUIRE_ADMIN_APPROVAL": "1"
+      },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "LeafWatch: Run All Pytest Tests",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "tests",
+        "-v"
+      ],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "LeafWatch: Check Database Integrity",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/check_integrity.py",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "LeafWatch: Test Engine Sanity",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/test_engine.py",
+      "console": "integratedTerminal"
+    }
+  ]
+}
